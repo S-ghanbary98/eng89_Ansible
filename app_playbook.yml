@@ -1,0 +1,82 @@
+
+- hosts: web    # Target web machine
+  gather_facts: yes
+  become: true     # Give admin access to playbook
+
+# installing nginx
+  tasks:
+  - name: Install Nginx
+    apt: pkg=nginx state=present update_cache=yes
+-
+  name: "NodeJs Installation"
+  hosts: web
+  become: true
+  tasks:
+    - name: "add nodejs"
+      apt_key:
+        url: https://deb.nodesource.com/gpgkey/nodesource.gpg.key
+        state: present
+    - name: add repo
+      apt_repository:
+        repo: deb https://deb.nodesource.com/node_13.x bionic main
+        update_cache: yes
+    - name: "installing nodejs"
+      apt:
+        update_cache: yes
+        name: nodejs
+        state: present
+- name: "create file"
+      file:
+        path: /etc/nginx/sites-available/default
+        state: touch
+        mode: 0644
+    - name: "change default file"
+      blockinfile:
+        path: /etc/nginx/sites-available/default
+        block: |
+          server{                                          # Reverse proxy Config
+            listen 80;
+            server_name _;
+            location / {
+            proxy_pass http://192.168.33.10:3000;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade \$http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host \$host;
+            proxy_cache_bypass \$http_upgrade;
+            }
+          }
+      notify:
+        - Restart nginx
+    - name: update npm
+      command: npm install pm2 -g -y
+  handlers:
+  - name: Restart nginx
+    service:
+      name: nginx
+      state: restarted
+
+- name: "starting app"
+  hosts: web
+  become: true
+  tasks:
+    - name: "npm install"
+      shell: |
+        cd app/
+        npm install
+        pm2 kill
+
+    - name: "starting node.js"
+      shell: |
+        node Jenkins_CICD/app/seeds/seed.js
+        cd app/
+        pm2 start app.js
+-
+  name: "reverse proxy"
+  hosts: web
+  become: true
+  tasks:
+    - name: "delete current default"
+      file:
+        path: /etc/nginx/sites-available/default
+        state: absent

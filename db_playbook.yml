@@ -1,10 +1,7 @@
 ---
-
 - hosts: db
   gather_facts: yes
   become: true
-
-
   tasks:
   - name: install mongodb
     apt: pkg=mongodb state=present

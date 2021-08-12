@@ -1,8 +1,6 @@
-
 - hosts: web    # Target web machine
   gather_facts: yes
   become: true     # Give admin access to playbook
-
 # installing nginx
   tasks:
   - name: Install Nginx

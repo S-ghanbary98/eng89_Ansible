@@ -82,7 +82,7 @@ sudo apt-get install ansible
 
 
 ### Playbooks (DB and APP)
-![alt text](Ansible_ov.webp)
+![alt text](imagess/Ansible_ov.webp)
 -  playbook is a blueprint of automation tasks. Ansible's playbooks are executed on a set, group, or classification of hosts, which together make up an Ansible inventory.
 - We can install nginx and nodejs on the web server by creating a playbook known as `app_playbook.yml`.
 - This will install the nodejs and nginx dependencies on the web virtual machines. 
@@ -333,6 +333,73 @@ aws_scret_key: YOUR SECRET KEY
       tags: ['never', 'create_ec2']
 ```
 
+# Packer
 
+##### What is Packer?
+- Packer is an open source tool for creating identical machine images for multiple platforms from a single source configuration. 
 
+### Packer Installation
 
+```python
+ curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+sudo apt-get update && sudo apt-get install packer
+```
+
+### Building AMI 
+
+- The following template will be used to create an image.
+
+```python
+{
+  "variables": {
+  "aws_access_key": "${AWS_ACCESS_KEY_ID}",
+  "aws_secret_key": "${AWS_SECRET_ACCESS_KEY}",
+  "vpc_region": "${vpc_region}",
+  "vpc_id": "${vpc_id}",
+  "vpc_public_sn_id": "${vpc_public_sn_id}",
+  "vpc_public_sg_id": "${vpc_public_sg_id}",
+  "source_ami": "${source_ami}",
+  "instance_type": "${instance_type}",
+  "ssh_username": "${ssh_username}"
+},
+  "builders": [
+    {
+      "type": "amazon-ebs",
+      "access_key": "{{user `aws_access_key`}}",
+      "secret_key": "{{user `aws_secret_key`}}",
+      "region": "{{user `vpc_region`}}",
+      "vpc_id": "{{user `vpc_id`}}",
+      "subnet_id": "{{user `vpc_public_sn_id`}}",
+      "associate_public_ip_address": true,
+      "security_group_id": "{{user `vpc_public_sg_id`}}",
+      "source_ami": "{{user `source_ami`}}",
+      "instance_type": "{{user `instance_type`}}",
+      "ssh_username": "{{user `ssh_username`}}",
+      "ami_name": "base-ami-{{isotime \"2006-01-02-1504\"}}",
+      "ami_groups": "all",
+      "launch_block_device_mappings": [
+        {
+          "device_name": "/dev/sda1",
+          "volume_type": "gp2",
+          "volume_size": "30",
+          "delete_on_termination": true
+        }
+      ]
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "script": "baseInit.sh"
+    }
+  ],
+  "post-processors": [
+    {
+      "type": "manifest",
+      "output": "manifest.json",
+      "strip_path": true
+    }
+  ]
+}
+```
